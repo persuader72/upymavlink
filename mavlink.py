@@ -16,6 +16,7 @@ import dialect
 LINK_SERIAL = 'serial'
 LINK_TCP = 'tcp'
 LINK_UDP = 'udp'
+LINK_FILE = 'file'
 
 def set_close_on_exec(fd):
     try:
@@ -84,8 +85,14 @@ class Mavlink(object):
                     self.port.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             set_close_on_exec(self.port.fileno())
             self.port.setblocking(0)
+        elif self.link_type == LINK_FILE:
+            mode = 'wb' if options.get('writable', False) else 'rb'
+            self.addr = device
+            self.port = None
+            self.fd = open(self.addr, mode)
 
-        self.fd = self.port.fileno()
+        if self.link_type != LINK_FILE:
+            self.fd = self.port.fileno()
 
         self.mav_count = 0
         self.mav_loss = 0
@@ -143,6 +150,8 @@ class Mavlink(object):
             self.write_tcp(buf)
         elif self.link_type == LINK_UDP:
             self.write_udp(buf)
+        elif self.link_type == LINK_FILE:
+            self.write_file(buf)
 
     def write_tcp(self, buf):
         try:
@@ -157,6 +166,12 @@ class Mavlink(object):
         except socket.error:
             pass
 
+    def write_file(self, buf):
+        try:
+            if self.addr:
+                self.fd.write(buf)
+        except IOError:
+            pass
 
     def mav_recv(self):
         try:
@@ -166,6 +181,8 @@ class Mavlink(object):
                 s = self.recv_tcp(16*1024)
             elif self.link_type == LINK_UDP:
                 s = self.recv_udp(16*1024)
+            elif self.link_type == LINK_FILE:
+                s = self.fd.read(1024)
         except Exception:
             time.sleep(0.1)
             return
@@ -185,6 +202,8 @@ class Mavlink(object):
                     #self.post_message(msg)
                 if msg.get_type() == "BAD_DATA":
                     pass
+
+        return msgs
 
     def post_message(self, msg):
         """ default post message call
