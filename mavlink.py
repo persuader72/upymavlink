@@ -67,7 +67,7 @@ class Mavlink(object):
             a = device.split(':')
             self.port = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.addr = (a[0], int(a[1]))
-            self.port.connect(self.addr)
+            print self.port.connect(self.addr)
             self.port.setblocking(0)
             set_close_on_exec(self.port.fileno())
             self.port.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
@@ -113,7 +113,7 @@ class Mavlink(object):
     def recv(self, n=None):
         if n is None:
             n = self.mav.bytes_needed()
-        if self.fd is None:
+        if self.port is not None:
             waiting = self.port.inWaiting()
             if waiting < n:
                 n = waiting
@@ -125,6 +125,7 @@ class Mavlink(object):
     def recv_tcp(self, n=None):
         if n is None:
             n = self.mav.bytes_needed()
+        print n
         try:
             data = self.port.recv(n)
         except socket.error as e:
@@ -176,7 +177,7 @@ class Mavlink(object):
     def mav_recv(self):
         try:
             if self.link_type == LINK_SERIAL:
-                s = self.recv(16*1024)
+                s = self.recv()
             elif self.link_type == LINK_TCP:
                 s = self.recv_tcp(16*1024)
             elif self.link_type == LINK_UDP:
