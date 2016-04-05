@@ -48,13 +48,16 @@ class PeriodicEvent(object):
 
 
 class Mavlink(object):
-    def __init__(self, device, baudrate=115200, linktype=None, options={}):
+    def __init__(self, device, baudrate=115200, linktype=None, options={}, debug=False):
         self.link_type = linktype if linktype is not None else LINK_SERIAL
 
         self.server = False
         self.addr = None
         self.port = None
         self.fd = None
+
+        self.debug_mode = debug
+        self.debug_buff = None
 
         self.target_system = 0
         self.target_component = 0
@@ -187,6 +190,10 @@ class Mavlink(object):
         except Exception:
             time.sleep(0.1)
             return
+
+        if self.debug_mode:
+            self.debug_buff = s
+
         if len(s) == 0:
             time.sleep(0.1)
             return
